@@ -105,9 +105,12 @@ with tab1: # 把内容放在第一个标签页里面
             note = st.text_input("备注", "状态良好")
 
             if st.form_submit_button("🚀 点击保存"):
-                data = {"日期": str(d), "具体时间": str(t)[0:5], "高压（收缩压）mmHg":sys,"低压（舒张压）mmHg":dia,"测量手臂":a,"心率":hr,"备注":note}
-                supabase.table("bp").insert(data).execute()
-                st.success("✅ 血压数据已存入云库！")
+                try:
+                    data = {"日期": str(d), "具体时间": str(t)[0:5], "高压（收缩压）mmHg":sys,"低压（舒张压）mmHg":dia,"测量手臂":a,"心率":hr,"备注":note}
+                    supabase.table("bp").insert(data).execute()
+                    st.toast("✅ 血压数据已存入云库！")
+                except Exception as e:
+                    st.error(f"保存失败，请呼叫张茜博：{e}")
 
 
 # 第二部分：数据管理与导出
@@ -137,13 +140,15 @@ with tab2:
             st.download_button("📥 下载血糖 Excel", output_g.getvalue(), "血糖记录.xlsx",
                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
+
+            st.dataframe(df_g, use_container_width=True, hide_index=True)
+
             # 删除功能
             del_g = st.selectbox("选择要删除的记录序号", ["请选择"] + df_g['序号'].tolist(), key="del_g")
 
             if st.button("🗑️ 删除选中的血糖记录") and del_g != "请选择":
                 supabase.table("glucose").delete().eq("序号", del_g).execute()
                 st.rerun()
-            st.dataframe(df_g, use_container_width=True, hide_index=True)
 
 
 
@@ -162,12 +167,14 @@ with tab2:
             st.download_button("📥 下载血压 Excel", output_b.getvalue(), "血压记录.xlsx",
                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
+
+            st.dataframe(df_b, use_container_width=True, hide_index=True)
+
             # 删除功能
             del_b = st.selectbox("选择要删除的记录序号", ["请选择"] + df_b['序号'].tolist(), key='del_b')
             if st.button("🗑️ 删除选中的血压记录") and del_b != "请选择":
                 supabase.table("bp").delete().eq("序号", del_b).execute()
                 st.rerun()
-            st.dataframe(df_b, use_container_width=True, hide_index=True)
 
         else:
             st.write("暂无血压记录")
@@ -181,15 +188,7 @@ with tab3:
 
     with tab6:
         if not df_g.empty:
-            # 计算平均值
-            avg_glucose = df_g['血糖数值(mmol/L)'].mean()
-            # 使用 st.metric 突出显示
-            st.metric("📊 平均血糖", f"{avg_glucose:.2f} mmol")
 
-            # 按时段分组平均值
-            st.subheader("各时段平均血糖")
-            period_avg = df_g.groupby('测量时段')['血糖数值(mmol/L)'].mean().reset_index()
-            st.dataframe(period_avg, use_container_width=True)
 
             # 降采样或排序处理
             df_g_plot = df_g.sort_values("日期")
@@ -197,12 +196,24 @@ with tab3:
             df_g_plot["日期时间"] = pd.to_datetime(df_g_plot["日期时间"])
             df_g_plot = df_g_plot.sort_values("日期时间")
             # 绘图
-            fig_g_plot = px.line(df_g_plot, x="日期时间", y="血糖数值(mmol/L)", color="测量时段", markers=True, title="血糖长期趋势图")
+            fig_g_plot = px.line(df_g_plot, x="日期时间", y="血糖数值(mmol/L)", hover_data=["测量时段"], markers=True, title="血糖长期趋势图")
             # 优化横坐标
             fig_g_plot.update_layout(xaxis=dict(tickangle=-45, tickformat='%y-%m-%d %H:%M'))
             # 显示图表
             st.plotly_chart(fig_g_plot, use_container_width=True)
             st.info("💡 提示：将鼠标悬停在图表右上角，点击‘相机’图标可下载高清打印图片")
+
+
+
+            # 计算平均值
+            avg_glucose = df_g['血糖数值(mmol/L)'].mean()
+            # 使用 st.metric 突出显示
+            st.metric("📊 平均血糖", f"{avg_glucose:.2f} mmol")
+
+            # 按时段分组平均值
+            st.write("各时段平均血糖")
+            period_avg = df_g.groupby('测量时段')['血糖数值(mmol/L)'].mean().reset_index()
+            st.dataframe(period_avg, use_container_width=True)
         else:
             st.write("暂时还没有录入血糖数据哦~")
 
@@ -210,14 +221,7 @@ with tab3:
 
     with tab7:
         if not df_b.empty:
-            # 计算平均值
-            # 高压
-            avg_bp1 = df_b["高压（收缩压）mmHg"].mean()
-            # 使用st.metric 突出显示
-            st.metric("📊 高压平均值", f"{avg_bp1:.2f} mmHg")
-            # 低压
-            avg_bp2 = df_b["低压（舒张压）mmHg"].mean()
-            st.metric("📊 低压平均值", f"{avg_bp2:.2f} mmHg")
+
 
 
             # 降采样或排序处理
@@ -231,6 +235,16 @@ with tab3:
             fig_b_plot.update_layout(xaxis=dict(tickangle=-45, tickformat='%Y-%m-%d %H:%M'))
             st.plotly_chart(fig_b_plot, use_container_width=True)
             st.info("💡 提示：将鼠标悬停在图表右上角，点击‘相机’图标可下载高清打印图片")
+
+
+            # 计算平均值
+            # 高压
+            avg_bp1 = df_b["高压（收缩压）mmHg"].mean()
+            # 使用st.metric 突出显示
+            st.metric("📊 高压平均值", f"{avg_bp1:.2f} mmHg")
+            # 低压
+            avg_bp2 = df_b["低压（舒张压）mmHg"].mean()
+            st.metric("📊 低压平均值", f"{avg_bp2:.2f} mmHg")
 
 
 
