@@ -71,7 +71,7 @@ st.markdown("""
 
 # 页面布局
 # 侧边筛选栏
-st.sidebar.tittle("🗓️ 时间筛选")
+st.sidebar.title("🗓️ 时间筛选")
 st.sidebar.header("🗓️ 时间筛选")
 range_option = st.sidebar.radio(
     "选择时间段",
