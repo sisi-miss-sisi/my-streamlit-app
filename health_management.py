@@ -71,7 +71,7 @@ st.markdown("""
 
 # 页面布局
 # 侧边筛选栏
-st.sidebar.title("🗓️ 时间筛选")
+
 st.sidebar.header("🗓️ 时间筛选")
 range_option = st.sidebar.radio(
     "选择时间段",
@@ -97,9 +97,10 @@ else:
 
 st.title("👨‍ 老爸健康数据管理系统") # st.title()大标题
 st.caption("数据已加密存储于云端，手机与电脑实时同步") # st.caption 小字提示
+st.info("💡 点击左上角“ >> ”筛选日期范围")
 
 # 导航功能区：新建三个标签页
-tab1, tab2, tab3 = st.tabs(["📝 填写记录", "📂 数据管理与导出", "📈 趋势分析"])
+tab1, tab2, tab3 = st.tabs(["📝 填写记录", "📂 数据管理", "📈 趋势分析"])
 
 
 # 第一部分：数据录入
