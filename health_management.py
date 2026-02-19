@@ -78,7 +78,7 @@ tab1, tab2, tab3 = st.tabs(["📝 填写记录", "📂 数据管理与导出", "
 
 # 第一部分：数据录入
 with tab1: # 把内容放在第一个标签页里面
-    option = st.radio("请选择测量项目：",("血糖记录", "血压记录"), horizontal=True)
+    option = st.radio("请选择测量项目：", ("血糖记录", "血压记录"), horizontal=True)
     # st.radio("提示文字", (选项1，选项2), horizontal=True)
     # horizontal=True:选项横着放；horizontal=False:选项竖着放
 
@@ -86,7 +86,7 @@ with tab1: # 把内容放在第一个标签页里面
         if option == "血糖记录": # 选择了记录血糖之后出来的表单
             d = st.date_input("日期", now_china.date())
             t = st.time_input("具体时间", now_china.time())
-            p = st.selectbox("测量时段",["早餐前（空腹）", "早餐后2小时", "午餐前", "午餐后2小时", "晚餐前", "晚餐后2小时"])
+            p = st.selectbox("测量时段", ["早餐前（空腹）", "早餐后2小时", "午餐前", "午餐后2小时", "晚餐前", "晚餐后2小时"])
             v = st.number_input("血糖数值(mmol/L)", min_value = 0.0, max_value = 30.0, value = 10.0, step = 0.1)
             n = st.text_input("备注","状态良好")
 
@@ -105,7 +105,7 @@ with tab1: # 把内容放在第一个标签页里面
             note = st.text_input("备注", "状态良好")
 
             if st.form_submit_button("🚀 点击保存"):
-                data = {"日期": str(d), "具体时间": str(t)[0:5],"高压（收缩压）mmHg":sys,"低压（舒张压）mmHg":dia,"测量手臂":a,"心率":hr,"备注":note}
+                data = {"日期": str(d), "具体时间": str(t)[0:5], "高压（收缩压）mmHg":sys,"低压（舒张压）mmHg":dia,"测量手臂":a,"心率":hr,"备注":note}
                 supabase.table("bp").insert(data).execute()
                 st.success("✅ 血压数据已存入云库！")
 
@@ -115,11 +115,11 @@ with tab2:
     st.header("数据管理中心")
 
     # 获取血糖数据
-    res_g = supabase.table("glucose").select('*').gte("日期", str(start_date)).lte("日期", str(end_date)).order("序号", desc=False).order("日期", desc=True).execute() # desc=True:降序/desc=False:升序
+    res_g = supabase.table("glucose").select('*').gte("日期", str(start_date)).lte("日期", str(end_date)).order("日期", desc=True).execute() # desc=True:降序/desc=False:升序
     df_g = pd.DataFrame(res_g.data)
 
     # 获取血压数值
-    res_b = supabase.table("bp").select('*').gte("日期", str(start_date)).lte("日期", str(end_date)).order("序号", desc=False).order("日期", desc=True).order("具体时间",desc=True).execute() # desc=True:降序/desc=False:升序
+    res_b = supabase.table("bp").select('*').gte("日期", str(start_date)).lte("日期", str(end_date)).order("日期", desc=True).order("具体时间",desc=True).execute() # desc=True:降序/desc=False:升序
     df_b = pd.DataFrame(res_b.data)
 
 
@@ -138,10 +138,10 @@ with tab2:
                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
             # 删除功能
-            del_g = st.selectbox("选择要删除的记录序号", ["请选择"] + df_g['序号'].tolist(), key="del_g")
+            del_g = st.selectbox("选择要删除的记录序号", ["请选择"] + df_g['id'].tolist(), key="del_g")
 
             if st.button("🗑️ 删除选中的血糖记录") and del_g != "请选择":
-                supabase.table("glucose").delete().eq("序号", del_g).execute()
+                supabase.table("glucose").delete().eq("id", del_g).execute()
                 st.rerun()
             st.dataframe(df_g, use_container_width=True, hide_index=True)
 
@@ -163,9 +163,9 @@ with tab2:
                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
             # 删除功能
-            del_b = st.selectbox("选择要删除的记录序号", ["请选择"] + df_b['序号'].tolist(), key='del_b')
+            del_b = st.selectbox("选择要删除的记录序号", ["请选择"] + df_b['id'].tolist(), key='del_b')
             if st.button("🗑️ 删除选中的血压记录") and del_b != "请选择":
-                supabase.table("bp").delete().eq("序号", del_b).execute()
+                supabase.table("bp").delete().eq("id", del_b).execute()
                 st.rerun()
             st.dataframe(df_b, use_container_width=True, hide_index=True)
 
@@ -217,7 +217,7 @@ with tab3:
             st.metric("📊 高压平均值", f"{avg_bp1:.2f} mmHg")
             # 低压
             avg_bp2 = df_b["低压（舒张压）mmHg"].mean()
-            st.metric("📊 低压平均值", f"{avg_bp2:2f} mmHg")
+            st.metric("📊 低压平均值", f"{avg_bp2:.2f} mmHg")
 
 
             # 降采样或排序处理
