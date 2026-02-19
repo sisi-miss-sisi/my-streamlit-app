@@ -138,10 +138,10 @@ with tab2:
                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
             # 删除功能
-            del_g = st.selectbox("选择要删除的记录序号", ["请选择"] + df_g['id'].tolist(), key="del_g")
+            del_g = st.selectbox("选择要删除的记录序号", ["请选择"] + df_g['序号'].tolist(), key="del_g")
 
             if st.button("🗑️ 删除选中的血糖记录") and del_g != "请选择":
-                supabase.table("glucose").delete().eq("id", del_g).execute()
+                supabase.table("glucose").delete().eq("序号", del_g).execute()
                 st.rerun()
             st.dataframe(df_g, use_container_width=True, hide_index=True)
 
@@ -163,9 +163,9 @@ with tab2:
                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
             # 删除功能
-            del_b = st.selectbox("选择要删除的记录序号", ["请选择"] + df_b['id'].tolist(), key='del_b')
+            del_b = st.selectbox("选择要删除的记录序号", ["请选择"] + df_b['序号'].tolist(), key='del_b')
             if st.button("🗑️ 删除选中的血压记录") and del_b != "请选择":
-                supabase.table("bp").delete().eq("id", del_b).execute()
+                supabase.table("bp").delete().eq("序号", del_b).execute()
                 st.rerun()
             st.dataframe(df_b, use_container_width=True, hide_index=True)
 
