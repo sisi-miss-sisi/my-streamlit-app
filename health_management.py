@@ -24,7 +24,7 @@ except Exception as e:
 
 
 # 页面美化
-st.set_page_config(page_title='老爸健康管家', layout='wide')
+st.set_page_config(page_title='老爸健康管家', layout='wide', initial_sidebar_state='collapsed')
 st.markdown("""
     <style>
     /* 调整 “按钮组件” 的样式 */
@@ -41,7 +41,32 @@ st.markdown("""
         font-size: 1.2rem !important;
         }
         </style>
+        
+        /*手机端优化*/
+    @media only screen and (max-width: 600px) {
+        .stButton>button {
+            height: 2.8em;
+            font-size: 14px !important;
+        }
+        .stNumberInput input, .stSelectbox select, .stDateInput, .stTimeInput {
+            font-size: 14px !important;
+        }
+        h1 {
+            font-size: 1.5rem !important;
+        }
+        h2, h3 {
+            font-size: 1.2rem !important;
+        }
+        .stTabs [data-baseweb='tab-list'] button {
+            font-size: 12px !important;
+            padding: 8px 4px;
+        }
+
+    }
+
     """, unsafe_allow_html=True)
+
+
 
 
 # 页面布局
@@ -142,7 +167,7 @@ with tab2:
                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
-            st.dataframe(df_g, use_container_width=True, hide_index=True)
+            st.dataframe(df_g, use_container_width=True, hide_index=True, height=400)
 
             # 删除功能
             del_g = st.selectbox("选择要删除的记录序号", ["请选择"] + df_g['序号'].tolist(), key="del_g")
@@ -226,7 +251,7 @@ with tab3:
 
             # 降采样或排序处理
             df_b_plot = df_b.sort_values("日期")
-            df_b_plot['日期时间'] = df_b_plot["日期"] +  " " + df_b_plot['具体时间']
+            df_b_plot['日期时间'] = df_b_plot["日期"] + " " + df_b_plot['具体时间']
             df_b_plot['日期时间'] = pd.to_datetime(df_b_plot['日期时间'])
             df_b_plot = df_b_plot.sort_values('日期时间')
 
