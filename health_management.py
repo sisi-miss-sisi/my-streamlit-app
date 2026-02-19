@@ -40,7 +40,7 @@ st.markdown("""
     .stNumberInput input, .stSelectbox select {
         font-size: 1.2rem !important;
         }
-        </style>
+        
         
         /*手机端优化*/
     @media only screen and (max-width: 600px) {
@@ -61,9 +61,9 @@ st.markdown("""
             font-size: 12px !important;
             padding: 8px 4px;
         }
-
+        
     }
-
+    </style>
     """, unsafe_allow_html=True)
 
 
@@ -71,7 +71,8 @@ st.markdown("""
 
 # 页面布局
 # 侧边筛选栏
-st.sidebar.header("🗓️ 数据范围筛选")
+st.sidebar.tittle("🗓️ 时间筛选")
+st.sidebar.header("🗓️ 时间筛选")
 range_option = st.sidebar.radio(
     "选择时间段",
     ["最近7天", "最近30天", "最近60天", "自定义"],
@@ -140,7 +141,7 @@ with tab1: # 把内容放在第一个标签页里面
 
 # 第二部分：数据管理与导出
 with tab2:
-    st.header("数据管理中心")
+
     st.write(f"当前显示从{start_date} 至 {end_date} 的数据")
 
     # 获取血糖数据
@@ -207,7 +208,7 @@ with tab2:
 
 # 第三部分：数据可视化（平均值计算）与打印
 with tab3:
-    st.header("趋势分析与平均值")
+
     st.write(f"当前显示从{start_date} 至 {end_date} 的数据")
 
     tab6, tab7 = st.tabs(['血糖可视化', '血压可视化'])
