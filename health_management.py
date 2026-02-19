@@ -1,9 +1,15 @@
 import streamlit as st # 做网页界面
 import pandas as pd # 用来存表格数据
+import pytz
 import datetime # 导入日期时间模块，记录日期和时间
 import plotly.express as px # 用来画折线图
 from io import BytesIO # 做PDF时临时存放数据用
 from supabase import create_client, Client # 导入云端数据库Supabase客户端，实现数据云同步
+
+
+# 修改时间获取
+china_tz = pytz.timezone('Asia/Shanghai')
+now_china = datetime.datetime.now(china_tz)
 
 # 链接云端数据库
 # 尝试从Streamlit密钥中读取数据库地址和密钥
@@ -46,7 +52,7 @@ range_option = st.sidebar.radio(
     ["最近7天", "最近30天", "最近60天", "自定义"],
     index=1
  )
-today = datetime.date.today()
+today = now_china.date()
 # 自定义筛选
 if range_option == "自定义":
     start_date = st.sidebar.date_input("起始日期", value=today - datetime.timedelta(days=60))
@@ -72,28 +78,26 @@ tab1, tab2, tab3 = st.tabs(["📝 填写记录", "📂 数据管理与导出", "
 
 # 第一部分：数据录入
 with tab1: # 把内容放在第一个标签页里面
-    option = st.radio("请选择测量项目：",("血糖记录","血压记录"),horizontal=True)
+    option = st.radio("请选择测量项目：",("血糖记录", "血压记录"), horizontal=True)
     # st.radio("提示文字", (选项1，选项2), horizontal=True)
     # horizontal=True:选项横着放；horizontal=False:选项竖着放
 
     with st.form("input_form", clear_on_submit=True): # st.form("表单名", clear_on_submit=True):创建表单，提交后自动清空内容
         if option == "血糖记录": # 选择了记录血糖之后出来的表单
-            d = st.date_input("日期", datetime.date.today())
-            t = st.time_input("具体时间", datetime.datetime.now().time())
+            d = st.date_input("日期", now_china.date())
+            t = st.time_input("具体时间", now_china.time())
             p = st.selectbox("测量时段",["早餐前（空腹）", "早餐后2小时", "午餐前", "午餐后2小时", "晚餐前", "晚餐后2小时"])
             v = st.number_input("血糖数值(mmol/L)", min_value = 0.0, max_value = 30.0, value = 10.0, step = 0.1)
             n = st.text_input("备注","状态良好")
 
             if st.form_submit_button("🚀 点击保存"): # 点击保存按钮后
-                res = supabase.table("glucose").select("序号", count='exact').order("序号", desc=True).limit(1).execute()
-                new_id = (res.data[0]['序号'] + 1) if res.data else 1
-                data = {"序号": new_id, "日期": str(d), "具体时间": str(t)[:5], "测量时段":p, "血糖数值(mmol/L)":v, "备注":n}
+                data = {"日期": str(d), "具体时间": str(t)[:5], "测量时段":p, "血糖数值(mmol/L)":v, "备注":n}
                 supabase.table("glucose").insert(data).execute() # 把打包好的数据，存入云端数据库的 “glucose（血糖）表” 里
                 st.success("✅ 血糖数据已存入云库！")
 
         else:
-            d = st.date_input("日期", datetime.date.today())
-            t = st.time_input("具体时间", datetime.datetime.now().time())
+            d = st.date_input("日期", now_china.date())
+            t = st.time_input("具体时间", now_china.time())
             sys = st.number_input("高压（收缩压）mmHg", value=160)
             dia = st.number_input("低压（舒张压）mmHg", value=95)
             a = st.selectbox("测量手臂",['左臂','右臂'])
@@ -101,9 +105,7 @@ with tab1: # 把内容放在第一个标签页里面
             note = st.text_input("备注", "状态良好")
 
             if st.form_submit_button("🚀 点击保存"):
-                res = supabase.table("bp").select("序号", count='exact').order("序号", desc=True).limit(1).execute()
-                new_id = (res.data[0]['序号'] + 1) if res.data else 1
-                data = {"序号": new_id, "日期": str(d), "具体时间": str(t)[0:5],"高压（收缩压）mmHg":sys,"低压（舒张压）mmHg":dia,"测量手臂":a,"心率":hr,"备注":note}
+                data = {"日期": str(d), "具体时间": str(t)[0:5],"高压（收缩压）mmHg":sys,"低压（舒张压）mmHg":dia,"测量手臂":a,"心率":hr,"备注":note}
                 supabase.table("bp").insert(data).execute()
                 st.success("✅ 血压数据已存入云库！")
 
@@ -195,7 +197,7 @@ with tab3:
             df_g_plot["日期时间"] = pd.to_datetime(df_g_plot["日期时间"])
             df_g_plot = df_g_plot.sort_values("日期时间")
             # 绘图
-            fig_g_plot = px.line(df_g_plot, x="日期时间", y="血糖数值(mmol/L)",color="测量时段", markers=True, title="血糖长期趋势图")
+            fig_g_plot = px.line(df_g_plot, x="日期时间", y="血糖数值(mmol/L)", color="测量时段", markers=True, title="血糖长期趋势图")
             # 优化横坐标
             fig_g_plot.update_layout(xaxis=dict(tickangle=-45, tickformat='%y-%m-%d %H:%M'))
             # 显示图表
@@ -212,10 +214,10 @@ with tab3:
             # 高压
             avg_bp1 = df_b["高压（收缩压）mmHg"].mean()
             # 使用st.metric 突出显示
-            st.metric("📊 高压平均值", f"{avg_bp1:2f}mmHg")
+            st.metric("📊 高压平均值", f"{avg_bp1:.2f} mmHg")
             # 低压
             avg_bp2 = df_b["低压（舒张压）mmHg"].mean()
-            st.metric("📊 低压平均值", f"{avg_bp2:2f}mmHg")
+            st.metric("📊 低压平均值", f"{avg_bp2:2f} mmHg")
 
 
             # 降采样或排序处理
@@ -226,7 +228,7 @@ with tab3:
 
             # 绘图
             fig_b_plot = px.line(df_b_plot, x="日期时间", y=['高压（收缩压）mmHg', '低压（舒张压）mmHg'], markers=True, title='血压长期趋势图')
-            fig_b_plot.update_layout(xaxis=dict(tickangle=-45,tickformat='%Y-%m-%d %H:%M'))
+            fig_b_plot.update_layout(xaxis=dict(tickangle=-45, tickformat='%Y-%m-%d %H:%M'))
             st.plotly_chart(fig_b_plot, use_container_width=True)
             st.info("💡 提示：将鼠标悬停在图表右上角，点击‘相机’图标可下载高清打印图片")
 
