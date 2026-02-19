@@ -3,14 +3,14 @@ import pandas as pd # 用来存表格数据
 import datetime # 导入日期时间模块，记录日期和时间
 import plotly.express as px # 用来画折线图
 from io import BytesIO # 做PDF时临时存放数据用
-from supabase import create_client,Client # 导入云端数据库Supabase客户端，实现数据云同步
+from supabase import create_client, Client # 导入云端数据库Supabase客户端，实现数据云同步
 
 # 链接云端数据库
 # 尝试从Streamlit密钥中读取数据库地址和密钥
 try:
-    url:str = st.secrets["SUPABASE_URL"]
-    key:str = st.secrets["SUPABASE_KEY"]
-    supabase:Client = create_client(url,key)
+    url: str = st.secrets["SUPABASE_URL"]
+    key: str = st.secrets["SUPABASE_KEY"]
+    supabase: Client = create_client(url, key)
 except Exception as e:
     st.error("⚠️ 未检测到数据库配置，请呼唤张茜博：在 Secrets 中设置 SUPABASE_URL 和 SUPABASE_KEY")
     st.stop()
@@ -43,16 +43,16 @@ st.markdown("""
 st.sidebar.header("🗓️ 数据范围筛选")
 range_option = st.sidebar.radio(
     "选择时间段",
-    ["最近7天","最近30天","最近60天","自定义"],
-    index = 1
+    ["最近7天", "最近30天", "最近60天", "自定义"],
+    index=1
  )
 today = datetime.date.today()
 # 自定义筛选
 if range_option == "自定义":
-    start_date = st.sidebar.date_input("起始日期", value=today - datetime.timedelta(days=30))
+    start_date = st.sidebar.date_input("起始日期", value=today - datetime.timedelta(days=60))
     end_date = st.sidebar.date_input("结束日期", value=today)
     if start_date > end_date:
-        st.sidebar.error("起始日期不能晚于结束日期")
+        st.sidebar.error("❌ 起始日期不能晚于结束日期")
         st.stop()
 
 # 最近几天筛选
@@ -85,24 +85,25 @@ with tab1: # 把内容放在第一个标签页里面
             n = st.text_input("备注","状态良好")
 
             if st.form_submit_button("🚀 点击保存"): # 点击保存按钮后
-                id = len(st.session_state.glucose_df) + 1
-                data = {"序号":id, "日期":str(d),"具体时间":str(t)[:5], "测量时段":p, "血糖数值(mmol/L)":v, "备注":n}
+                res = supabase.table("glucose").select("序号", count='exact').order("序号", desc=True).limit(1).execute()
+                new_id = (res.data[0]['序号'] + 1) if res.data else 1
+                data = {"序号": new_id, "日期": str(d), "具体时间": str(t)[:5], "测量时段":p, "血糖数值(mmol/L)":v, "备注":n}
                 supabase.table("glucose").insert(data).execute() # 把打包好的数据，存入云端数据库的 “glucose（血糖）表” 里
                 st.success("✅ 血糖数据已存入云库！")
 
         else:
-            c1,c2 = st.columns(2)
-            d = c1.date_input("日期", datetime.date.today())
-            t = c2.time_input("具体时间", datetime.datetime.now().time())
-            sys = c1.number_input("高压（收缩压）mmHg", value=160)
-            dia = c2.number_input("低压（舒张压）mmHg", value=95)
-            a = c1.selectbox("测量手臂",['左臂','右臂'])
-            hr = c2.number_input("心率", value=80)
+            d = st.date_input("日期", datetime.date.today())
+            t = st.time_input("具体时间", datetime.datetime.now().time())
+            sys = st.number_input("高压（收缩压）mmHg", value=160)
+            dia = st.number_input("低压（舒张压）mmHg", value=95)
+            a = st.selectbox("测量手臂",['左臂','右臂'])
+            hr = st.number_input("心率", value=80)
             note = st.text_input("备注", "状态良好")
 
             if st.form_submit_button("🚀 点击保存"):
-                id = len(st.session_state.bp_df) + 1
-                data = {"序号":id, "日期":str(d),"具体时间":str(t)[0:5],"高压（收缩压）mmHg":sys,"低压（舒张压）mmHg":dia,"测量手臂":a,"心率":hr,"备注":note}
+                res = supabase.table("bp").select("序号", count='exact').order("序号", desc=True).limit(1).execute()
+                new_id = (res.data[0]['序号'] + 1) if res.data else 1
+                data = {"序号": new_id, "日期": str(d), "具体时间": str(t)[0:5],"高压（收缩压）mmHg":sys,"低压（舒张压）mmHg":dia,"测量手臂":a,"心率":hr,"备注":note}
                 supabase.table("bp").insert(data).execute()
                 st.success("✅ 血压数据已存入云库！")
 
@@ -113,15 +114,15 @@ with tab2:
 
     # 获取血糖数据
     res_g = supabase.table("glucose").select('*').gte("日期", str(start_date)).lte("日期", str(end_date)).order("序号", desc=False).order("日期", desc=True).execute() # desc=True:降序/desc=False:升序
-    df_g = pd.dataframe(res_g.data)
+    df_g = pd.DataFrame(res_g.data)
 
     # 获取血压数值
     res_b = supabase.table("bp").select('*').gte("日期", str(start_date)).lte("日期", str(end_date)).order("序号", desc=False).order("日期", desc=True).order("具体时间",desc=True).execute() # desc=True:降序/desc=False:升序
-    df_b = pd.dataframe(res_b.data)
+    df_b = pd.DataFrame(res_b.data)
 
 
     # 页面里新建两个页面
-    tab4, tab5 = st.tabs(["血糖记录","血压记录"])
+    tab4, tab5 = st.tabs(["血糖记录", "血压记录"])
 
     # 血糖记录
     with tab4:
@@ -174,14 +175,14 @@ with tab3:
     st.header("趋势分析与平均值")
     st.write(f"当前显示从{start_date} 至 {end_date} 的数据")
 
-    tab6, tab7 = st.tabs(['血糖可视化','血压可视化'])
+    tab6, tab7 = st.tabs(['血糖可视化', '血压可视化'])
 
     with tab6:
         if not df_g.empty:
             # 计算平均值
             avg_glucose = df_g['血糖数值(mmol/L)'].mean()
             # 使用 st.metric 突出显示
-            st.metric("📊 平均血糖", f"{avg_glucose:.2f}mmol")
+            st.metric("📊 平均血糖", f"{avg_glucose:.2f} mmol")
 
             # 按时段分组平均值
             st.subheader("各时段平均血糖")
