@@ -116,6 +116,7 @@ with tab1: # 把内容放在第一个标签页里面
 # 第二部分：数据管理与导出
 with tab2:
     st.header("数据管理中心")
+    st.write(f"当前显示从{start_date} 至 {end_date} 的数据")
 
     # 获取血糖数据
     res_g = supabase.table("glucose").select('*').gte("日期", str(start_date)).lte("日期", str(end_date)).order("日期", desc=True).execute() # desc=True:降序/desc=False:升序
@@ -127,11 +128,11 @@ with tab2:
 
 
     # 页面里新建两个页面
-    tab4, tab5 = st.tabs(["血糖记录", "血压记录"])
+    tab4, tab5 = st.tabs(["🩸血糖记录", "💓血压记录"])
 
     # 血糖记录
     with tab4:
-        st.subheader("🩸 血糖记录编辑")
+
         if not df_g.empty:
             # Excel导出功能
             output_g = BytesIO()
@@ -158,7 +159,7 @@ with tab2:
 
     #血压记录
     with tab5:
-        st.subheader("💓 血压记录编辑")
+
         if not df_b.empty:
             # Excel导出功能
             output_b = BytesIO()
@@ -203,17 +204,16 @@ with tab3:
             st.plotly_chart(fig_g_plot, use_container_width=True)
             st.info("💡 提示：将鼠标悬停在图表右上角，点击‘相机’图标可下载高清打印图片")
 
-
+            # 按时段分组平均值
+            st.write("各时段平均血糖")
+            period_avg = df_g.groupby('测量时段')['血糖数值(mmol/L)'].mean().reset_index()
+            st.dataframe(period_avg, use_container_width=True)
 
             # 计算平均值
             avg_glucose = df_g['血糖数值(mmol/L)'].mean()
             # 使用 st.metric 突出显示
             st.metric("📊 平均血糖", f"{avg_glucose:.2f} mmol")
 
-            # 按时段分组平均值
-            st.write("各时段平均血糖")
-            period_avg = df_g.groupby('测量时段')['血糖数值(mmol/L)'].mean().reset_index()
-            st.dataframe(period_avg, use_container_width=True)
         else:
             st.write("暂时还没有录入血糖数据哦~")
 
