@@ -113,7 +113,22 @@ with tab1: # 把内容放在第一个标签页里面
         if option == "血糖记录": # 选择了记录血糖之后出来的表单
             d = st.date_input("日期", now_china.date())
             t = st.time_input("具体时间", now_china.time())
-            p = st.selectbox("测量时段", ["早餐前（空腹）", "早餐后2小时", "午餐前", "午餐后2小时", "晚餐前", "晚餐后2小时"])
+            options = [
+                "早餐前（空腹）",
+                "早餐后2小时",
+                "午餐前",
+                "午餐后2小时",
+                "晚餐前",
+                "晚餐后2小时",
+            ]
+            p = st.radio(
+                "测量时段",
+                options,
+                index=0,  # 默认选中第一项
+                horizontal=False,  # 垂直排列，每行一个选项
+                key="period_radio"
+            )
+
             v = st.number_input("血糖数值(mmol/L)", min_value = 0.0, max_value = 30.0, value = 10.0, step = 0.1)
             n = st.text_input("备注","状态良好")
 
