@@ -161,13 +161,16 @@ with tab2:
     st.write(f"当前显示从{start_date} 至 {end_date} 的数据")
 
     # 获取血糖数据
-    res_g = supabase.table("glucose").select('*').gte("日期", str(start_date)).lte("日期", str(end_date)).order("日期", desc=True).execute() # desc=True:降序/desc=False:升序
+    res_g = supabase.table("glucose").select('*').gte("日期", str(start_date)).lte("日期", str(end_date)).order("日期", desc=True).order("具体时间",desc=True).execute() # desc=True:降序/desc=False:升序
     df_g = pd.DataFrame(res_g.data)
+    if not df_g.empty:
+        df_g['具体时间'] = df_g['具体时间'].astype(str).str[:5]
 
     # 获取血压数值
     res_b = supabase.table("bp").select('*').gte("日期", str(start_date)).lte("日期", str(end_date)).order("日期", desc=True).order("具体时间",desc=True).execute() # desc=True:降序/desc=False:升序
     df_b = pd.DataFrame(res_b.data)
-
+    if not df_b.empty:
+        df_b['具体时间'] = df_b['具体时间'].astype(str).str[:5]
 
     # 页面里新建两个页面
     tab4, tab5 = st.tabs(["🩸血糖记录", "💓血压记录"])
