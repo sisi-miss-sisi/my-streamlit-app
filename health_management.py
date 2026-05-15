@@ -21,6 +21,37 @@ except Exception as e:
     st.error("⚠️ 未检测到数据库配置，请呼唤张茜博：在 Secrets 中设置 SUPABASE_URL 和 SUPABASE_KEY")
     st.stop()
 
+# 离线存储功能
+# session_state:Streamlit自带的“记忆储存”工具，用来在页面刷新时记住数据
+
+# 创建一个空的 离线血糖列表
+if 'offline_glucose' not in st.session_state:
+    st.session_state.offline_glucose = []
+# 创建一个空的 离线血压列表
+if 'offline_bp' not in st.session_state:
+    st.session_state.offline_bp = []
+
+# 定义保存数据的函数：有网络时存储到云端，无网络时存储到本地
+def save_record(table_name, data):
+    success = False
+
+    # 有网时，能够连上数据库
+    if supabase:
+        try:
+            supabase.table(table_name).insert(data).execute()
+            success = True
+        except Exception:
+            success = False
+    # 无网络时，数据缓存在session_state列表里面
+    if not success:
+        if table_name == "glucose":
+            st.session_state.offline_glucose.append(data)
+        else:
+            st.session_state.offline_bp.append(data)
+
+    return success
+
+
 
 
 # 页面美化
@@ -96,8 +127,38 @@ else:
 
 
 st.title("👨‍ 老爸健康数据管理系统") # st.title()大标题
-st.write("数据已加密存储于云端，手机与电脑实时同步") # st.caption 小字提示
+
+# 缓存数据自动同步
+pending_count = len(st.session_state.offline_glucose)+len(st.session_state.offline_bp)
+if pending_count!=0 and supabase:
+    try:
+        # supabase 往数据库里插入数据：supabase.table(表名).insert(数据).execute()
+        # 自动同步血糖
+        for i in st.session_state.offline_glucose:
+            supabase.table("glucose").insert(i).execute()
+            st.session_state.offline_glucose.remove(i)
+
+        # 自动同步血压
+        for i in st.session_state.offline_bp:
+            supabase.table("bp").insert(i).execute()
+            st.session_state.offline_bp.remove(i)
+
+        st.success("网络恢复，离线数据已自动同步到云端")
+        st.rerun() # 刷新页面
+
+    except:
+        pass
+
+
+# 缓存数据同步提示
+if pending_count !=0:
+   st.write(f"当前离线记录{pending_count}条，联网后将自动同步")
+else:
+    st.write("数据已加密存储于云端，手机与电脑实时同步") # st.caption 小字提示
+
 st.info("💡 点击左上角“ >> ”筛选日期范围")
+
+
 
 # 导航功能区：新建三个标签页
 tab1, tab2, tab3 = st.tabs(["📝 填写记录", "📂 数据管理", "📈 趋势分析"])
@@ -133,9 +194,15 @@ with tab1: # 把内容放在第一个标签页里面
             n = st.text_input("备注","状态良好")
 
             if st.form_submit_button("🚀 点击保存"): # 点击保存按钮后
-                data = {"日期": str(d), "具体时间": str(t)[:5], "测量时段":p, "血糖数值(mmol/L)":v, "备注":n}
-                supabase.table("glucose").insert(data).execute() # 把打包好的数据，存入云端数据库的 “glucose（血糖）表” 里
-                st.success("✅ 血糖数据已存入云库！")
+                try:
+                    data = {"日期": str(d), "具体时间": str(t)[:5], "测量时段":p, "血糖数值(mmol/L)":v, "备注":n}
+                    # supabase.table("glucose").insert(data).execute() # 把打包好的数据，存入云端数据库的 “glucose（血糖）表” 里
+                    if save_record("glucose", data):
+                        st.success("✅ 血糖数据已存入云库！")
+                    else:
+                        st.info("血糖数据已存入离线暂存区！")
+                except Exception as e:
+                    st.error(f"保存失败，请呼叫张茜博：{e}")
 
         else:
             d = st.date_input("日期", now_china.date())
@@ -149,8 +216,12 @@ with tab1: # 把内容放在第一个标签页里面
             if st.form_submit_button("🚀 点击保存"):
                 try:
                     data = {"日期": str(d), "具体时间": str(t)[0:5], "高压（收缩压）mmHg":sys, "低压（舒张压）mmHg":dia, "测量手臂":a, "心率":hr, "备注":note}
-                    supabase.table("bp").insert(data).execute()
-                    st.toast("✅ 血压数据已存入云库！")
+                    if save_record("bp", data):
+                        st.success("✅ 血压数据已存入云库！")
+                    else:
+                        st.info("血压数据已存入离线暂存区！")
+                    # supabase.table("bp").insert(data).execute()
+                    # st.toast("✅ 血压数据已存入云库！")
                 except Exception as e:
                     st.error(f"保存失败，请呼叫张茜博：{e}")
 
