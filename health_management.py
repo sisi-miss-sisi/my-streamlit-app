@@ -134,12 +134,12 @@ if pending_count!=0 and supabase:
     try:
         # supabase 往数据库里插入数据：supabase.table(表名).insert(数据).execute()
         # 自动同步血糖
-        for i in st.session_state.offline_glucose:
+        for i in st.session_state.offline_glucose[:]:
             supabase.table("glucose").insert(i).execute()
             st.session_state.offline_glucose.remove(i)
 
         # 自动同步血压
-        for i in st.session_state.offline_bp:
+        for i in st.session_state.offline_bp[:]:
             supabase.table("bp").insert(i).execute()
             st.session_state.offline_bp.remove(i)
 
