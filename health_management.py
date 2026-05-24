@@ -245,6 +245,8 @@ with tab3:
 
             # 按时段分组平均值
             st.write("各时段平均血糖")
+            order = ["早餐前（空腹）", "早餐后2小时", "午餐前", "午餐后2小时", "晚餐前", "晚餐后2小时"]
+            df_g['测量时段'] = pd.Categorical(df_g['测量时段'], catergories=order, ordered=True)
             period_avg = df_g.groupby('测量时段')['血糖数值(mmol/L)'].mean().reset_index()
             st.dataframe(period_avg, use_container_width=True)
 
