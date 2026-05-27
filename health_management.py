@@ -122,6 +122,9 @@ with tab1:  # 把内容放在第一个标签页里面
             )
 
             v = st.number_input("血糖数值(mmol/L)", min_value=0.0, max_value=30.0, value=10.0, step=0.1)
+            if v>30:
+                st.error("好像填错数据啦~")
+
             n = st.text_input("备注", "状态良好")
 
             if st.form_submit_button("🚀 点击保存"):  # 点击保存按钮后
@@ -135,10 +138,21 @@ with tab1:  # 把内容放在第一个标签页里面
         else:
             d = st.date_input("日期", now_china.date())
             t = st.time_input("具体时间", now_china.time())
+
             sys = st.number_input("高压（收缩压）mmHg", value=160)
+            if sys>300:
+                st.error("好像填错数据啦~")
+
             dia = st.number_input("低压（舒张压）mmHg", value=95)
+            if dia>300:
+                st.error("好像填错数据啦~")
+
             a = st.selectbox("测量手臂", ['左臂', '右臂'])
+
             hr = st.number_input("心率", value=80)
+            if hr>300:
+                st.error("好像填错数据啦~")
+
             note = st.text_input("备注", "状态良好")
 
             if st.form_submit_button("🚀 点击保存"):
