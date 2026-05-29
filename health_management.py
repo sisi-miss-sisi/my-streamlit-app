@@ -101,7 +101,7 @@ with tab1:  # 把内容放在第一个标签页里面
     # st.radio("提示文字", (选项1，选项2), horizontal=True)
     # horizontal=True:选项横着放；horizontal=False:选项竖着放
 
-    with st.form("input_form", clear_on_submit=True):  # st.form("表单名", clear_on_submit=True):创建表单，提交后自动清空内容
+    with st.form("input_form", clear_on_submit=False):  # st.form("表单名", clear_on_submit=True):创建表单，提交后自动清空内容
         if option == "血糖记录":  # 选择了记录血糖之后出来的表单
             d = st.date_input("日期", now_china.date())
             t = st.time_input("具体时间", now_china.time())
@@ -128,12 +128,14 @@ with tab1:  # 把内容放在第一个标签页里面
 
             if st.form_submit_button("🚀 点击保存"):  # 点击保存按钮后
                 if v>30 or v<=0 :
-                    st.error("血糖数值填写有误~")
+                    st.error("血糖数值疑似录入有误，请修改后重新保存~")
                 else:
                     try:
                         data = {"日期": str(d), "具体时间": str(t)[:5], "测量时段": p, "血糖数值(mmol/L)": v, "备注": n}
                         supabase.table("glucose").insert(data).execute()  # 把打包好的数据，存入云端数据库的 “glucose（血糖）表” 里
                         st.toast("✅ 血糖数据已存入云库！")
+                        # 保存成功后重新运行页面，清空表单
+                        st.rerun()
                     except Exception as e:
                         st.error(f"保存失败，请呼叫张茜博：{e}")
 
@@ -151,17 +153,18 @@ with tab1:  # 把内容放在第一个标签页里面
 
             if st.form_submit_button("🚀 点击保存"):
                 if sys>300 or sys<=0 :
-                    st.error("高压数值疑似录入有误")
+                    st.error("高压数值疑似录入有误，请修改后重新保存~")
                 elif dia>300 or dia<=0:
-                    st.error("低压数据疑似录入有误")
+                    st.error("低压数值疑似录入有误，请修改后重新保存~")
                 elif hr>300 or hr<=0:
-                    st.error("心率数据疑似录入有误")
+                    st.error("心率数值疑似录入有误，请修改后重新保存~")
                 else:
                     try:
                         data = {"日期": str(d), "具体时间": str(t)[0:5], "高压（收缩压）mmHg": sys, "低压（舒张压）mmHg": dia, "测量手臂": a,
                                 "心率": hr, "备注": note}
                         supabase.table("bp").insert(data).execute()
                         st.toast("✅ 血压数据已存入云库！")
+                        st.rerun()
                     except Exception as e:
                         st.error(f"保存失败，请呼叫张茜博：{e}")
 
