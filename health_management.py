@@ -367,7 +367,7 @@ with tab4:
                     fig_g.update_layout(
                         xaxis_title="日期时间",
                         yaxis_title="血糖 (mmol/L)",
-                        font=dict(family="ChineseFont"),  # 关键：图表也使用同一中文字体
+                        font=dict(family="Noto Sans CJK SC"),  # 关键：图表也使用同一中文字体
                         plot_bgcolor='white',
                         xaxis=dict(tickangle=-45),
                         width=1000,
@@ -407,7 +407,7 @@ with tab4:
 
                                    总体平均血糖：{overall_avg:.1f} mmol/L
 
-                                   请根据以上完整的血糖记录，用一段话（不超过200字）向医生描述用户近期的血糖变化趋势。只需要客观陈述数值的高低、波动大小、餐前餐后的变化，备注中不同饮食所反映的血糖趋势变化等。不要与任何标准对比，也不要给出“正常/不正常”或“好/不好”的评价。
+                                   请根据以上完整的血糖记录，用一段话（不超过200字）向医生描述用户近期的血糖变化趋势。只需要客观陈述数值的高低、波动大小、餐前餐后的变化，备注中不同饮食所反映的血糖趋势变化等。不要与任何标准对比（不要帮用户和医生对数值“高低”下定义，可以对比得出高低变化趋势），也不要给出“正常/不正常”或“好/不好”的评价。
                                    """
                             response = client.chat.completions.create(
                                 model="deepseek-chat",
@@ -497,7 +497,7 @@ with tab4:
                     fig_b.update_layout(
                         xaxis_title="日期时间",
                         yaxis_title="血压 (mmHg)",
-                        font=dict(family="ChineseFont"),
+                        font=dict(family="Noto Sans CJK SC"),
                         plot_bgcolor='white',
                         xaxis=dict(tickangle=-45),
                         width=1000,
@@ -533,7 +533,7 @@ with tab4:
 
                                    平均高压：{avg_sys:.1f} mmHg，平均低压：{avg_dia:.1f} mmHg
 
-                                   请根据以上完整的血压数据，用一段话（不超过200字）向医生描述用户近期的血压变化趋势。只需要客观陈述数值的高低、波动大小、高低压的变化情况，不要与任何标准对比，也不要给出“正常/不正常”或“好/不好”的评价。如果备注中有相关信息，可以提及。
+                                   请根据以上完整的血压数据，用一段话（不超过200字）向医生描述用户近期的血压变化趋势。只需要客观陈述数值的高低、波动大小、高低压的变化情况，不要与任何标准对比（不要帮用户和医生对数值“高低”下定义，可以对比得出高低变化趋势），也不要给出“正常/不正常”或“好/不好”的评价。如果备注中有相关信息，可以提及。
                                    """
                             response = client.chat.completions.create(
                                 model="deepseek-chat",
