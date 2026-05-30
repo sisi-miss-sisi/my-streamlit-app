@@ -318,37 +318,21 @@ with tab3:
 with tab4:
     st.write(f"报告显示从{start_date} 至 {end_date} 的数据")
 
-    # 自动下载并注册中文字体（使用国内镜像，确保下载成功）
+    # 直接使用本地 OPPO 字体（无需网络，手机 PDF 正常显示）
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    import os, requests
+    import os
 
-    font_file = "NotoSansSC-Regular.ttf"
+    font_file = "OPPOSans-M.ttf"
     if not os.path.exists(font_file):
-        with st.spinner("正在下载中文字体（约1.5MB），请稍候..."):
-            # 国内镜像地址（稳定、快速）
-            url = "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/OTF/SimplifiedChinese/NotoSansSC-Regular.otf"
-            try:
-                r = requests.get(url, timeout=30)
-                if r.status_code == 200:
-                    with open(font_file, "wb") as f:
-                        f.write(r.content)
-                    st.success("字体下载成功！")
-                else:
-                    st.error(f"字体下载失败，状态码：{r.status_code}")
-                    st.stop()
-            except Exception as e:
-                st.error(f"网络错误，无法下载字体：{e}")
-                st.stop()
+        st.error("未找到字体文件 OPPOSans-M.ttf，请确保它在程序目录下。")
+        st.stop()
     pdfmetrics.registerFont(TTFont('ChineseFont', font_file))
     styles = getSampleStyleSheet()
     normal_style = ParagraphStyle('Normal', parent=styles['Normal'], fontName='ChineseFont')
     heading_style = ParagraphStyle('Heading2', parent=styles['Heading2'], fontName='ChineseFont')
     title_style = ParagraphStyle('Title', parent=styles['Title'], fontName='ChineseFont', fontSize=18, alignment=1)
-
-    tab41, tab42 = st.tabs(['血糖报告','血压报告'])
-
 
     # 血糖报告打印
     with tab41:
