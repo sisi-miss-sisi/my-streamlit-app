@@ -318,31 +318,29 @@ with tab3:
 with tab4:
     st.write(f"报告显示从{start_date} 至 {end_date} 的数据")
 
-    # 保证PDF字体正常显示
+    # 自动下载并注册中文字体（使用国内镜像，确保下载成功）
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    import os
+    import os, requests
 
-    # 尝试多个系统字体路径（按优先级）
-    font_paths = [
-        "C:/Windows/Fonts/simhei.ttf",  # Windows 黑体
-        "C:/Windows/Fonts/msyh.ttc",  # Windows 微软雅黑
-        "/System/Library/Fonts/PingFang.ttc",  # macOS 苹方
-        "/System/Library/Fonts/STHeiti Light.ttc",  # macOS 黑体
-        "NotoSansSC-Regular.ttf"  # 如果用户手动下载了放在程序目录
-    ]
-    font_file = None
-    for path in font_paths:
-        if os.path.exists(path):
-            font_file = path
-            break
-
-    if font_file is None:
-        st.error("未找到中文字体文件！请下载 NotoSansSC-Regular.ttf 并放到程序目录，或确保系统有中文字体。")
-        st.stop()
-
-    # 注册字体
+    font_file = "NotoSansSC-Regular.ttf"
+    if not os.path.exists(font_file):
+        with st.spinner("正在下载中文字体（约1.5MB），请稍候..."):
+            # 国内镜像地址（稳定、快速）
+            url = "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/OTF/SimplifiedChinese/NotoSansSC-Regular.otf"
+            try:
+                r = requests.get(url, timeout=30)
+                if r.status_code == 200:
+                    with open(font_file, "wb") as f:
+                        f.write(r.content)
+                    st.success("字体下载成功！")
+                else:
+                    st.error(f"字体下载失败，状态码：{r.status_code}")
+                    st.stop()
+            except Exception as e:
+                st.error(f"网络错误，无法下载字体：{e}")
+                st.stop()
     pdfmetrics.registerFont(TTFont('ChineseFont', font_file))
     styles = getSampleStyleSheet()
     normal_style = ParagraphStyle('Normal', parent=styles['Normal'], fontName='ChineseFont')
