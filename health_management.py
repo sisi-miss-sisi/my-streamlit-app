@@ -5,6 +5,16 @@ import datetime  # 导入日期时间模块，记录日期和时间
 import plotly.express as px  # 用来画折线图
 from io import BytesIO  # 做PDF时临时存放数据用
 from supabase import create_client, Client  # 导入云端数据库Supabase客户端，实现数据云同步
+from openai import OpenAI # AI接入
+# 生成PDF报告
+import tempfile, os, shutil
+import plotly.io as pio
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+
 
 # 修改时间获取
 china_tz = pytz.timezone('Asia/Shanghai')
@@ -66,7 +76,7 @@ st.markdown("""
 # 页面布局
 # 侧边筛选栏
 
-st.sidebar.header("🗓️ 时间筛选")
+st.sidebar.header("时间筛选")
 range_option = st.sidebar.radio(
     "选择时间段",
     ["最近7天", "最近30天", "最近60天", "自定义"],
@@ -93,7 +103,7 @@ st.write("数据已加密存储于云端，手机与电脑实时同步")  # st.c
 st.info("💡 点击左上角“ >> ”筛选日期范围")
 
 # 导航功能区：新建三个标签页
-tab1, tab2, tab3 = st.tabs(["📝 填写记录", "📂 数据管理", "📈 趋势分析"])
+tab1, tab2, tab3, tab4 = st.tabs(["📝 填写记录", "🗂️ 数据管理", "📉 趋势分析", "🖨️ 报告打印"])
 
 # 第一部分：数据录入
 with tab1:  # 把内容放在第一个标签页里面
@@ -189,10 +199,10 @@ with tab2:
         df_b['具体时间'] = df_b['具体时间'].astype(str).str[:5]
 
     # 页面里新建两个页面
-    tab4, tab5 = st.tabs(["🩸血糖记录", "💓血压记录"])
+    tab21, tab22 = st.tabs(["🩸血糖记录", "💓血压记录"])
 
     # 血糖记录
-    with tab4:
+    with tab21:
 
         if not df_g.empty:
             # Excel导出功能
@@ -217,7 +227,7 @@ with tab2:
             st.write("暂无血糖记录")
 
     # 血压记录
-    with tab5:
+    with tab22:
 
         if not df_b.empty:
             # Excel导出功能
@@ -242,9 +252,9 @@ with tab2:
 with tab3:
     st.write(f"当前显示从{start_date} 至 {end_date} 的数据")
 
-    tab6, tab7 = st.tabs(['血糖可视化', '血压可视化'])
+    tab31, tab32 = st.tabs(['血糖可视化', '血压可视化'])
 
-    with tab6:
+    with tab31:
         if not df_g.empty:
 
             # 降采样或排序处理
@@ -276,7 +286,7 @@ with tab3:
         else:
             st.write("暂时还没有录入血糖数据哦~")
 
-    with tab7:
+    with tab32:
         if not df_b.empty:
 
             # 降采样或排序处理
@@ -304,23 +314,290 @@ with tab3:
             st.write("暂时还没有录入血压数据哦~")
 
 
+# 第四部分：报告打印
+with tab4:
+    st.write(f"报告显示从{start_date} 至 {end_date} 的数据")
+
+    # 保证PDF字体正常显示
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    import os
+
+    # 尝试多个系统字体路径（按优先级）
+    font_paths = [
+        "C:/Windows/Fonts/simhei.ttf",  # Windows 黑体
+        "C:/Windows/Fonts/msyh.ttc",  # Windows 微软雅黑
+        "/System/Library/Fonts/PingFang.ttc",  # macOS 苹方
+        "/System/Library/Fonts/STHeiti Light.ttc",  # macOS 黑体
+        "NotoSansSC-Regular.ttf"  # 如果用户手动下载了放在程序目录
+    ]
+    font_file = None
+    for path in font_paths:
+        if os.path.exists(path):
+            font_file = path
+            break
+
+    if font_file is None:
+        st.error("未找到中文字体文件！请下载 NotoSansSC-Regular.ttf 并放到程序目录，或确保系统有中文字体。")
+        st.stop()
+
+    # 注册字体
+    pdfmetrics.registerFont(TTFont('ChineseFont', font_file))
+    styles = getSampleStyleSheet()
+    normal_style = ParagraphStyle('Normal', parent=styles['Normal'], fontName='ChineseFont')
+    heading_style = ParagraphStyle('Heading2', parent=styles['Heading2'], fontName='ChineseFont')
+    title_style = ParagraphStyle('Title', parent=styles['Title'], fontName='ChineseFont', fontSize=18, alignment=1)
+
+    tab41, tab42 = st.tabs(['血糖报告','血压报告'])
 
 
+    # 血糖报告打印
+    with tab41:
+        if df_g.empty:
+            st.warning("当前时间段无血糖数据，无法生成报告")
+        else:
+            if st.button("📄 生成血糖报告 PDF", key="glucose_pdf_btn", use_container_width=True):
+                with st.spinner("正在生成血糖报告，请稍后......"):
 
+                    # 1.血糖趋势图准备
+                    df_g_plot = df_g.sort_values("日期")
+                    df_g_plot["日期时间"] = df_g_plot["日期"] + " " + df_g_plot["具体时间"]
+                    df_g_plot["日期时间"] = pd.to_datetime(df_g_plot["日期时间"])
+                    df_g_plot = df_g_plot.sort_values("日期时间")
+                    fig_g = px.line(df_g_plot, x="日期时间", y="血糖数值(mmol/L)", hover_data=["测量时段"], markers=True,
+                                    title="血糖长期趋势图")
+                    fig_g.update_layout(
+                        xaxis_title="日期时间",
+                        yaxis_title="血糖 (mmol/L)",
+                        font=dict(family="ChineseFont"),  # 关键：图表也使用同一中文字体
+                        plot_bgcolor='white',
+                        xaxis=dict(tickangle=-45),
+                        width=1000,
+                        height=500
+                    )
+                    # 2.平均值准备
+                    # 各时段平均值
+                    order = ["早餐前（空腹）", "早餐后2小时", "午餐前", "午餐后2小时", "晚餐前", "晚餐后2小时"]
+                    df_g['测量时段'] = pd.Categorical(df_g['测量时段'], categories=order, ordered=True)
+                    period_avg = df_g.groupby('测量时段')['血糖数值(mmol/L)'].mean().reset_index()
+                    # 总体平均值
+                    overall_avg = df_g['血糖数值(mmol/L)'].mean()
 
+                    # 3.AI总结准备
+                    ai_text = ""
+                    if st.secrets.get("DEEPSEEK_API_KEY"):
+                        try:
+                            client = OpenAI(
+                                api_key=st.secrets["DEEPSEEK_API_KEY"],
+                                base_url=st.secrets.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
+                            )
+                            df_g_sorted = df_g.sort_values(['日期', '具体时间'])
+                            records = []
+                            for _, row in df_g_sorted.iterrows():
+                                # 备注如果为空或是默认的"状态良好"，可以省略
+                                note_part = f"，备注：{row['备注']}" if row['备注'] and row['备注'] != "状态良好" else ""
+                                records.append(
+                                    f"{row['日期']} {row['具体时间']} [{row['测量时段']}] : {row['血糖数值(mmol/L)']} mmol/L{note_part}"
+                                )
+                            data_str = "\n".join(records)
 
+                            overall_avg = df_g['血糖数值(mmol/L)'].mean()
+                            user_prompt = f"""
+                                   时间段：{start_date} 至 {end_date}
+                                   用户血糖记录（按时间顺序，共{len(df_g)}条）：
+                                   {data_str}
 
+                                   总体平均血糖：{overall_avg:.1f} mmol/L
 
+                                   请根据以上完整的血糖记录，用一段话（不超过200字）向医生描述用户近期的血糖变化趋势。只需要客观陈述数值的高低、波动大小、餐前餐后的变化，备注中不同饮食所反映的血糖趋势变化等。不要与任何标准对比，也不要给出“正常/不正常”或“好/不好”的评价。
+                                   """
+                            response = client.chat.completions.create(
+                                model="deepseek-chat",
+                                messages=[
+                                    {"role": "system", "content": "你是一位医疗数据报告助手，只负责客观描述数据趋势，不提供医疗建议。"},
+                                    {"role": "user", "content": user_prompt}
+                                ],
+                                temperature=0.5,
+                                max_tokens=400
+                            )
+                            ai_text = response.choices[0].message.content.strip()
+                        except Exception as e:
+                            st.warning(f"AI 总结生成失败：{e}")
 
+                    # 生成PDF
+                    temp_dir = tempfile.mkdtemp()
+                    img_path = os.path.join(temp_dir, "glucose_trend.png")
+                    fig_g.write_image(img_path, width=800, height=400, scale=2)
 
+                    pdf_path = os.path.join(temp_dir, "glucose_report.pdf")
+                    doc = SimpleDocTemplate(pdf_path, pagesize=A4, topMargin=20 * mm, bottomMargin=20 * mm)
+                    story = []
 
+                    # 使用已经定义好的 title_style（中文字体）
+                    story.append(Paragraph(f"血糖健康报告（{start_date} 至 {end_date}）", title_style))
+                    story.append(Spacer(1, 10 * mm))
 
+                    # 插入趋势图（使用 heading_style）
+                    story.append(Paragraph("血糖长期趋势图", heading_style))
+                    story.append(Image(img_path, width=160 * mm, height=80 * mm, kind='proportional'))
+                    story.append(Spacer(1, 8 * mm))
 
+                    # 各时段平均血糖表（使用 heading_style 作为标题）
+                    story.append(Paragraph("各时段平均血糖 (mmol/L)", heading_style))
+                    data = [["测量时段", "平均血糖"]]
+                    for _, row in period_avg.iterrows():
+                        data.append([row['测量时段'], f"{row['血糖数值(mmol/L)']:.1f}"])
+                    t = Table(data, colWidths=[80 * mm, 40 * mm])
+                    t.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+                        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                        ('FONTNAME', (0, 0), (-1, -1), 'ChineseFont'),  # 表格内文字使用中文字体
+                    ]))
+                    story.append(t)
+                    story.append(Spacer(1, 8 * mm))
 
+                    # 总体平均血糖
+                    story.append(Paragraph("总体平均血糖", heading_style))
+                    story.append(Paragraph(f"{overall_avg:.1f} mmol/L", normal_style))
+                    story.append(Spacer(1, 8 * mm))
 
+                    # AI 总结
+                    if ai_text:
+                        story.append(Paragraph("AI总结（仅供参考）", heading_style))
+                        story.append(Paragraph(ai_text, normal_style))
+                    else:
+                        story.append(Paragraph("⚠️ 未生成 AI 总结（未配置 API 或调用失败）", normal_style))
 
+                    doc.build(story)
 
+                    with open(pdf_path, "rb") as f:
+                        pdf_bytes = f.read()
+                    st.download_button(
+                        label="📥 点击下载血糖报告 PDF",
+                        data=pdf_bytes,
+                        file_name=f"血糖报告_{start_date}_至_{end_date}.pdf",
+                        mime="application/pdf"
+                    )
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+    # 血压报告打印
+    with tab42:
+        if df_b.empty:
+            st.warning("当前时间段无血压数据，无法生成报告")
+        else:
+            if st.button("📄 生成血压报告 PDF", key="bp_pdf_btn", use_container_width=True):
+                with st.spinner("正在生成血压报告，请稍后......"):
 
+                    # 1.血压趋势图准备
+                    df_b_plot = df_b.sort_values("日期")
+                    df_b_plot['日期时间'] = df_b_plot["日期"] + " " + df_b_plot['具体时间']
+                    df_b_plot['日期时间'] = pd.to_datetime(df_b_plot['日期时间'])
+                    df_b_plot = df_b_plot.sort_values('日期时间')
+                    fig_b = px.line(df_b_plot, x="日期时间", y=['高压（收缩压）mmHg', '低压（舒张压）mmHg'],
+                                    markers=True, title='血压长期趋势图')
+                    fig_b.update_layout(
+                        xaxis_title="日期时间",
+                        yaxis_title="血压 (mmHg)",
+                        font=dict(family="ChineseFont"),
+                        plot_bgcolor='white',
+                        xaxis=dict(tickangle=-45),
+                        width=1000,
+                        height=500
+                    )
+                    # 2.平均值准备
+                    avg_sys = df_b["高压（收缩压）mmHg"].mean()
+                    avg_dia = df_b["低压（舒张压）mmHg"].mean()
 
+                    # 3.AI总结准备
+                    ai_text = ""
+                    if st.secrets.get("DEEPSEEK_API_KEY"):
+                        try:
+                            client = OpenAI(
+                                api_key=st.secrets["DEEPSEEK_API_KEY"],
+                                base_url=st.secrets.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
+                            )
+                            df_b_sorted = df_b.sort_values(['日期', '具体时间'])
+                            records = []
+                            for _, row in df_b_sorted.iterrows():
+                                note_part = f"，备注：{row['备注']}" if row['备注'] and row['备注'] != "状态良好" else ""
+                                records.append(
+                                    f"{row['日期']} {row['具体时间']} - 高压 {row['高压（收缩压）mmHg']} mmHg, 低压 {row['低压（舒张压）mmHg']} mmHg, 心率 {row['心率']} bpm{note_part}"
+                                )
+                            data_str = "\n".join(records)
 
+                            avg_sys = df_b["高压（收缩压）mmHg"].mean()
+                            avg_dia = df_b["低压（舒张压）mmHg"].mean()
+                            user_prompt = f"""
+                                   时间段：{start_date} 至 {end_date}
+                                   用户血压记录（按时间顺序，共{len(df_b)}条）：
+                                   {data_str}
 
+                                   平均高压：{avg_sys:.1f} mmHg，平均低压：{avg_dia:.1f} mmHg
+
+                                   请根据以上完整的血压数据，用一段话（不超过200字）向医生描述用户近期的血压变化趋势。只需要客观陈述数值的高低、波动大小、高低压的变化情况，不要与任何标准对比，也不要给出“正常/不正常”或“好/不好”的评价。如果备注中有相关信息，可以提及。
+                                   """
+                            response = client.chat.completions.create(
+                                model="deepseek-chat",
+                                messages=[
+                                    {"role": "system", "content": "你是一位医疗数据报告助手，只负责客观描述数据趋势，不提供医疗建议。"},
+                                    {"role": "user", "content": user_prompt}
+                                ],
+                                temperature=0.5,
+                                max_tokens=400
+                            )
+                            ai_text = response.choices[0].message.content.strip()
+                        except Exception as e:
+                            st.warning(f"AI 总结生成失败：{e}")
+
+                    # 生成PDF
+                    temp_dir = tempfile.mkdtemp()
+                    img_path = os.path.join(temp_dir, "bp_trend.png")
+                    fig_b.write_image(img_path, width=800, height=400, scale=2)
+
+                    pdf_path = os.path.join(temp_dir, "bp_report.pdf")
+                    doc = SimpleDocTemplate(pdf_path, pagesize=A4, topMargin=20 * mm, bottomMargin=20 * mm)
+                    story = []
+
+                    # 直接使用 tab4 开头定义的 title_style（已包含中文字体）
+                    story.append(Paragraph(f"血压健康报告（{start_date} 至 {end_date}）", title_style))
+                    story.append(Spacer(1, 10 * mm))
+
+                    # 插入趋势图（使用 heading_style）
+                    story.append(Paragraph("血压长期趋势图", heading_style))
+                    story.append(Image(img_path, width=160 * mm, height=80 * mm, kind='proportional'))
+                    story.append(Spacer(1, 8 * mm))
+
+                    # 血压平均值表（标题使用 heading_style，表格内容指定中文字体）
+                    story.append(Paragraph("血压平均值 (mmHg)", heading_style))
+                    bp_data = [["项目", "平均值"], ["高压（收缩压）", f"{avg_sys:.1f}"], ["低压（舒张压）", f"{avg_dia:.1f}"]]
+                    bp_table = Table(bp_data, colWidths=[80 * mm, 40 * mm])
+                    bp_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+                        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                        ('FONTNAME', (0, 0), (-1, -1), 'ChineseFont'),  # 表格内文字使用中文字体
+                    ]))
+                    story.append(bp_table)
+                    story.append(Spacer(1, 8 * mm))
+
+                    # AI 总结（使用 normal_style 和 heading_style）
+                    if ai_text:
+                        story.append(Paragraph("AI总结（仅供参考）", heading_style))
+                        story.append(Paragraph(ai_text, normal_style))
+                    else:
+                        story.append(Paragraph("⚠️ 未生成 AI 总结（未配置 API 或调用失败）", normal_style))
+
+                    doc.build(story)
+
+                    with open(pdf_path, "rb") as f:
+                        pdf_bytes = f.read()
+                    st.download_button(
+                        label="📥 点击下载血压报告 PDF",
+                        data=pdf_bytes,
+                        file_name=f"血压报告_{start_date}_至_{end_date}.pdf",
+                        mime="application/pdf"
+                    )
+                    shutil.rmtree(temp_dir, ignore_errors=True)

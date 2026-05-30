@@ -1,6 +1,10 @@
 streamlit
 pandas
+pytz
 plotly
 supabase
+openai
+reportlab
+kaleido
 xlsxwriter
-pytz
+requests
