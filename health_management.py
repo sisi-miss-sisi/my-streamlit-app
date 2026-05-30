@@ -334,6 +334,9 @@ with tab4:
     heading_style = ParagraphStyle('Heading2', parent=styles['Heading2'], fontName='ChineseFont')
     title_style = ParagraphStyle('Title', parent=styles['Title'], fontName='ChineseFont', fontSize=18, alignment=1)
 
+    tab41, tab42 = st.tabs(['血糖报告', '血压报告'])
+
+
     # 血糖报告打印
     with tab41:
         if df_g.empty:
