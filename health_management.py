@@ -16,6 +16,18 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
 
+import plotly.io as pio
+
+# 为 Kaleido 设置显式的无头浏览器参数，解决在Streamlit Cloud上卡住/报错的关键
+# 参考自 https://discuss.streamlit.io/t/unable-to-run-plotly-kaleido-on-streamlit-cloud-to-generate-image-exports-from-graphs/23425/11
+pio.kaleido.scope.chromium_args = (
+    "--headless",           # 无界面模式
+    "--no-sandbox",         # 禁用沙盒，许多云端环境必需
+    "--single-process",     # 单进程模式，适配容器环境
+    "--disable-gpu"         # 禁用GPU，适用于无图形界面的服务器
+)
+
+
 # 修改时间获取
 china_tz = pytz.timezone('Asia/Shanghai')
 now_china = datetime.datetime.now(china_tz)
